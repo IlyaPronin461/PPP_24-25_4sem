@@ -1,0 +1,45 @@
+project/
+├── .env
+├── alembic.ini              # конфиг alembic (файл)
+├── docker-compose.yml
+├── requirements.txt
+├── alembic/                 # папка с миграциями
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/            # папка для миграций
+│       └── ...              # файлы миграций
+└── app/
+    ├── __init__.py
+    ├── main.py
+    ├── api/
+    │   ├── __init__.py
+    │   └── endpoints/
+    │       ├── __init__.py
+    │       ├── auth.py
+    │       └── encode.py
+    ├── core/
+    │   ├── __init__.py
+    │   ├── config.py        # отсутствует у вас
+    │   ├── celery_config.py
+    │   └── security.py
+    ├── cruds/
+    │   ├── __init__.py
+    │   └── user.py
+    ├── db/
+    │   ├── __init__.py      # отсутствует у вас
+    │   └── session.py
+    ├── models/
+    │   ├── __init__.py
+    │   └── user.py
+    ├── schemas/
+    │   ├── __init__.py
+    │   ├── encode.py
+    │   └── user.py
+    ├── services/
+    │   ├── __init__.py
+    │   ├── celery_worker.py
+    │   ├── huffman.py
+    │   └── xor.py
+    └── tasks/               # отсутствует у вас
+        ├── __init__.py
+        └── encode_tasks.py
