@@ -1,3 +1,3 @@
-from .main import app  # Импорт FastAPI приложения
+from .main import app
 
-__all__ = ["app"]  # Определение публичного интерфейса модуля
+__all__ = ["app"]

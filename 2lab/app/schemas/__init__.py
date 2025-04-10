@@ -1,4 +1,4 @@
-from .user import (  # noqa
+from .user import (
     UserBase,
     UserCreate,
     User,
@@ -6,7 +6,7 @@ from .user import (  # noqa
     TokenData,
     UserInDB,
 )
-from .encode import (  # noqa
+from .encode import (
     EncodeRequest,
     EncodeResponse,
     DecodeRequest,

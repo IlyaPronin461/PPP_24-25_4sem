@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build: .
@@ -10,15 +8,9 @@ services:
       - "8000:8000"
     depends_on:
       - redis
-      - db
     environment:
       - REDIS_URL=redis://redis:6379/0
       - SQLALCHEMY_DATABASE_URI=sqlite:////code/sql_app.db
-
-  db:
-    image: sqlite
-    volumes:
-      - ./sql_app.db:/code/sql_app.db
 
   redis:
     image: redis:alpine

@@ -1,3 +1,8 @@
+# запустить: docker-compose up -d
+# остановить: docker-compose down
+# пересобрать и запустить: docker-compose up --build -d
+
+
 from fastapi import FastAPI
 from app.api.endpoints import auth, encode
 from app.core.config import settings
@@ -10,12 +15,10 @@ app.include_router(encode.router, prefix="/encode", tags=["encode"])
 
 @app.on_event("startup")
 def on_startup():
-    """Создание таблиц в БД при старте приложения"""
     create_tables()
 
 @app.get("/", summary="Корневой маршрут", tags=["Основные"])
 def read_root():
-    """Возвращает приветственное сообщение сервиса шифрования"""
     return {
         "message": "Welcome to the Encryption Service API",
         "docs": "/docs",

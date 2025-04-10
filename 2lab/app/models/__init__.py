@@ -1,3 +1,3 @@
-from .user import User  # noqa
+from .user import User
 
 __all__ = ["User"]

@@ -13,6 +13,7 @@ from app.schemas.user import UserCreate, User, Token
 from app.cruds.user import create_user, get_user_by_email
 from app.db.session import get_db
 
+
 router = APIRouter()
 
 @router.post("/sign-up/", response_model=User)

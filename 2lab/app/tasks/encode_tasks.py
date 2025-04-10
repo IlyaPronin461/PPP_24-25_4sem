@@ -6,19 +6,17 @@ from app.core.celery_config import celery_app
 @celery_app.task(bind=True)
 def encode_task(self, text: str, key: str):
     try:
-        # Обновление статуса задачи
-        self.update_state(state='PROGRESS', meta={'status': 'Huffman encoding...'})
+        self.update_state(state='PROGRESS', meta={'status': 'Huffman encoding...'}) # Обновление статуса задачи
 
-        # 1. Сжатие Хаффмана
+        # сжатие хаффмана
         frequency = HuffmanCoding.build_frequency_dict(text)
         tree = HuffmanCoding.build_huffman_tree(frequency)
         codes = HuffmanCoding.build_codes(tree)
         encoded_text, padding = HuffmanCoding.encode_text(text, codes)
 
-        # Обновление статуса
         self.update_state(state='PROGRESS', meta={'status': 'XOR encryption...'})
 
-        # 2. XOR шифрование
+        # xor шифрование
         encrypted_data = XORCipher.encrypt(encoded_text, key)
 
         return {
@@ -40,16 +38,14 @@ def encode_task(self, text: str, key: str):
 @celery_app.task(bind=True)
 def decode_task(self, encoded_data: str, key: str, huffman_codes: dict, padding: int):
     try:
-        # Обновление статуса
         self.update_state(state='PROGRESS', meta={'status': 'XOR decryption...'})
 
-        # 1. XOR расшифровка
+        # xor расшифровка
         decrypted_data = XORCipher.decrypt(encoded_data, key)
 
-        # Обновление статуса
         self.update_state(state='PROGRESS', meta={'status': 'Huffman decoding...'})
 
-        # 2. Распаковка Хаффмана
+        # распаковка хаффмана
         decoded_text = HuffmanCoding.decode_text(
             decrypted_data,
             huffman_codes,
@@ -72,5 +68,4 @@ def decode_task(self, encoded_data: str, key: str, huffman_codes: dict, padding:
 # Тестовая задача для проверки Celery
 @celery_app.task
 def test_task(x: int, y: int) -> int:
-    """Пример простой задачи для тестирования Celery"""
     return x + y
