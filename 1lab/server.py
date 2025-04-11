@@ -1,13 +1,10 @@
-# файл с сервером
 from pydub import AudioSegment
-import eyed3
 import os
 import json
-import threading
 import socket
+import threading
 import io
 import logging
-
 
 class Server:
     def __init__(self, host='localhost', port=8899, audio_folder='audio'):
@@ -16,12 +13,11 @@ class Server:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.audio_folder = os.path.join(current_dir, audio_folder)
         self.track_info = {}
+        self.track_segments = {}
         self.socket = None
         self.is_running = False
-
         logs_dir = os.path.join(current_dir, 'logs')
         os.makedirs(logs_dir, exist_ok=True)
-
         log_path = os.path.join(logs_dir, 'server.log')
         logging.basicConfig(
             level=logging.DEBUG,
@@ -35,23 +31,29 @@ class Server:
         self.log.info('Сервер начинает работу')
         self.log.info(f'Аудио файлы: {self.audio_folder}')
         self.log.info(f'Файлы для логов: {logs_dir}')
-
         self.load_audio_files()
 
     def load_audio_files(self):
         self.track_info = {}
+        self.track_segments = {}
         for file in os.listdir(self.audio_folder):
             if file.endswith(('.mp3', '.wav')):
                 full_path = os.path.join(self.audio_folder, file)
                 try:
-                    audio = eyed3.load(full_path)
+                    audio = AudioSegment.from_file(full_path)
+                    segments = []
+                    segment_length = 6000  # 6 секунд
+
+                    # аудио на сегменты
+                    for start_ms in range(0, len(audio), segment_length):
+                        segment = audio[start_ms:start_ms + segment_length]
+                        segments.append(segment)
+
                     self.track_info[file] = {
-                        'name': audio.tag.title,
-                        'artist': audio.tag.artist,
-                        'album': audio.tag.album,
-                        'year': str(audio.tag.recording_date) if audio.tag.recording_date else None,
-                        'duration': audio.info.time_secs
+                        'name': file,
+                        'duration': len(audio) / 1000
                     }
+                    self.track_segments[file] = segments
                 except Exception:
                     pass
 
@@ -64,7 +66,6 @@ class Server:
         self.socket.listen(3)
         self.is_running = True
         print(f'Сервер стартанул, {self.host}:{self.port}')
-
         while self.is_running:
             try:
                 conn, addr = self.socket.accept()
@@ -76,31 +77,18 @@ class Server:
             except Exception as e:
                 print(f'Ошибка: {e}')
 
-    def cut_audio(self, track_num, start, end):
+    def cut_audio(self, track_name, segment_idx):
         try:
-            self.log.info('Запрос на то, чтобы обрезать файл')
-            tracks = list(self.track_info.keys())
-            if track_num >= len(tracks):
+            segments = self.track_segments.get(track_name)
+            if segments and 0 <= segment_idx < len(segments):
+                segment = segments[segment_idx]
+                buffer = io.BytesIO()
+                segment.export(buffer, format='mp3')
+                result = buffer.getvalue()
+                return result
+            else:
+                self.log.error(f'Ошибка: неверный индекс сегмента для {track_name}')
                 return None
-
-            track_path = os.path.join(self.audio_folder, tracks[track_num])
-            self.log.debug(f'Загрузка {track_path}')
-
-            sound = AudioSegment.from_mp3(track_path)
-            self.log.debug(f'Файл загружен, длительность: {len(sound) / 1000} секунд')
-
-            start_ms = int(float(start) * 1000)
-            end_ms = int(float(end) * 1000)
-
-            self.log.debug('Обрезка аудио')
-            segment = sound[start_ms:end_ms]
-
-            buffer = io.BytesIO()
-            segment.export(buffer, format='mp3')
-
-            result = buffer.getvalue()
-            self.log.info('Обрезка завершена')
-            return result
         except Exception as e:
             self.log.error(f'Ошибка при обработке аудио: {str(e)}', exc_info=True)
             return None
@@ -108,15 +96,12 @@ class Server:
     def process_client(self, conn):
         try:
             client_addr = conn.getpeername()
-            self.log.info(f'Обращается клинет {client_addr}')
-
+            self.log.info(f'Обращается клиент {client_addr}')
             while True:
                 data = conn.recv(1024).decode('utf-8')
                 if not data:
                     break
-
-                self.log.debug(f'{client_addr} сделал запро: {data}')
-
+                self.log.debug(f'{client_addr} сделал запрос: {data}')
                 try:
                     request = json.loads(data)
                     cmd = request.get('command')
@@ -143,19 +128,16 @@ class Server:
                     conn.send(response.encode('utf-8'))
 
                 elif cmd == 'get_part_of_audio':
-                    self.log.debug('Возвращение фрагмента аудио')
-                    track_num = request.get('file_index')
-                    start = request.get('start_time')
-                    end = request.get('end_time')
-
-                    if not all([track_num is not None, start, end]):
-                        error = 'Нужно указать все параметры'
-                        self.log.error(error)
-                        response = json.dumps({'error': error})
+                    track_name = request.get('file_name')
+                    segment_idx = request.get('segment_idx')
+                    if track_name is None or segment_idx is None:
+                        error_msg = 'Нужно указать все параметры'
+                        self.log.error(error_msg)
+                        response = json.dumps({'error': error_msg})
                         conn.send(response.encode('utf-8'))
                         continue
 
-                    audio = self.cut_audio(track_num, start, end)
+                    audio = self.cut_audio(track_name, segment_idx)
                     if audio:
                         size = len(audio).to_bytes(8, byteorder='big')
                         conn.send(size)

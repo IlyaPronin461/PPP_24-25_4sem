@@ -28,3 +28,7 @@ class TokenData(BaseModel):
 
 class UserInDB(User):
     password: str
+
+
+class UserWithToken(User):
+    token: str
