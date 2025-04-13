@@ -4,9 +4,10 @@ from datetime import timedelta
 from app.core.security import (
     create_access_token,
     verify_password,
-    get_password_hash
+    get_password_hash,
+    get_current_user
 )
-from app.schemas.user import UserCreate, UserWithToken
+from app.schemas.user import UserCreate, UserWithToken, User
 from app.cruds.user import create_user, get_user_by_email
 from app.db.session import get_db
 
@@ -57,3 +58,10 @@ def login(user: UserCreate, db: Session = Depends(get_db)):
         "email": db_user.email,
         "token": access_token
     }
+
+
+@router.get("/users/me/", response_model=User)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+# eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzRAZXhhbXBsZS5jb20iLCJleHAiOjE3NDQ1NTQyNzF9.lF59k2wlTJIDGYhNnITrLlkeqsvYxwKAc-K6DDb7h84
