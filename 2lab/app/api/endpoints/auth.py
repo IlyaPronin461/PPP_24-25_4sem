@@ -11,6 +11,11 @@ from app.schemas.user import UserCreate, UserWithToken, User
 from app.cruds.user import create_user, get_user_by_email
 from app.db.session import get_db
 
+from app.services.huffman import HuffmanCoding
+from app.services.xor import XORCipher
+from app.schemas.encode import EncodeRequest, EncodeResponse, DecodeRequest, DecodeResponse
+from typing import Dict
+
 router = APIRouter()
 
 
@@ -64,4 +69,36 @@ def login(user: UserCreate, db: Session = Depends(get_db)):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
-# eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzRAZXhhbXBsZS5jb20iLCJleHAiOjE3NDQ1NTQyNzF9.lF59k2wlTJIDGYhNnITrLlkeqsvYxwKAc-K6DDb7h84
+
+@router.post("/encode", response_model=EncodeResponse)
+async def encode_text(request: EncodeRequest):
+    # Сжатие методом хаффмана
+    frequency = HuffmanCoding.build_frequency_dict(request.text)
+    tree = HuffmanCoding.build_huffman_tree(frequency)
+    huffman_codes = HuffmanCoding.build_codes(tree)
+    encoded_text, padding = HuffmanCoding.encode_text(request.text, huffman_codes)
+
+    # шифрование с использованием xor
+    encrypted_data = XORCipher.encrypt(encoded_text, request.key)
+
+    return EncodeResponse(
+        encoded_data=encrypted_data,
+        key=request.key,
+        huffman_codes=huffman_codes,
+        padding=padding
+    )
+
+
+@router.post("/decode", response_model=DecodeResponse)
+async def decode_text(request: DecodeRequest):
+    # xor расшифровка
+    decrypted_data = XORCipher.decrypt(request.encoded_data, request.key)
+
+    # распаковка текста методом хаффмана
+    decoded_text = HuffmanCoding.decode_text(
+        decrypted_data,
+        request.huffman_codes,
+        request.padding
+    )
+
+    return DecodeResponse(decoded_text=decoded_text)
